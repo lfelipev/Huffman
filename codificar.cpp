@@ -3,9 +3,20 @@
 #include<QDebug>
 
 Codificar::Codificar() {
-    QFileInfo file("C:/Qt/Tools/QtCreator/bin/Huffman Compressor/HuffmanComp/in.txt");
+    QFileInfo file("../Huffman/in.txt");
     inputFilePath = file.filePath();
     inputFileName = file.fileName();
+}
+
+void Codificar::outputFilePath(const char *path, char *outputPath, const char *fileExtension) {
+    int i;
+    const int pathLength = strlen(path);
+    for (i=0; i<pathLength-5; ++i) {
+        outputPath[i] = path[i];
+    }
+    outputPath[i] = 0;
+
+    strcat(outputPath, fileExtension);
 }
 
 unsigned int Codificar::tamanhoArquivo(FILE *src) {
@@ -43,16 +54,10 @@ unsigned int Codificar::calcNumFreq(unsigned int *freqList) {
 }
 
 void Codificar::comprimirArquivo() {
-    /** O problema está aqui **/
     QByteArray byteArray1 = inputFilePath.toUtf8();
     const char *inputFile = byteArray1.constData();
 
     huffmanCodificar(inputFile);
-
-    /** Testes **/
-    qDebug() << byteArray1; //Não seria para imprimir uma cadeia de códigos?
-    qDebug() << inputFile;
-
 }
 
 
@@ -61,8 +66,15 @@ void Codificar::huffmanCodificar(const char *inputFile) {
     FILE *src = fopen(inputFile, "rb");
 
 
+    /** Abre o destino do arquivo **/
+    char outputPath[1000];
+    const char *fileExtension = "2.txt";
+    outputFilePath(inputFile, outputPath, fileExtension);
+    FILE *dest = fopen(outputPath, "wb");
+
+
     /** Verificação da existência do arquivo **/
-    if (src == NULL) {
+    if (src == NULL || dest == NULL) {
         qDebug() << "Nao foi possível encontrar o arquivo de origem!";
         exit(EXIT_FAILURE);
     }
@@ -85,7 +97,6 @@ void Codificar::huffmanCodificar(const char *inputFile) {
 
     /** Testes **/
     qDebug() << fileSize;
-    qDebug() << *freqList;
     qDebug() << charFreq;
 
 
@@ -94,14 +105,17 @@ void Codificar::huffmanCodificar(const char *inputFile) {
         qDebug() << freqList[5];
     }
     rewind(src); **/
-
-     /**for(int i=0; i<256; ++i) {
+    char c;
+    for(int i=0; i<256; ++i) {
         if(freqList[i] > 0) {
-            qDebug() << freqList[i];
+            c=i;
+            qDebug() << "DEC. ASCII: " << i << "CHAR: " << c << "Frequencia: " << freqList[i];
+            fwrite(&c, sizeof(char), sizeof(c), dest);
         }
-    }**/
+    }
 
 
     /** Fecha o arquivo **/
     fclose(src);
+    fclose(dest);
 }
