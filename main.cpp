@@ -2,6 +2,6 @@
 
 int main() {
     Codificar f;
-    f.comprimirArquivo(); //teste
+    f.compressFile(); //teste
     return 0;
 }
