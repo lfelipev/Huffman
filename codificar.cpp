@@ -62,10 +62,10 @@ void Codificar::buildNodeList(HuffNode **nodeList, unsigned int *freqList) {
             newNode = (HuffNode *)calloc(1, sizeof(HuffNode)); //Aloca um espaço na memória para o nó do caractere
             newNode->chr = i; //Caractere em questão
             newNode->freq = freqList[i]; //Quantidade em que o caractere em questão aparece
-            newNode->next = NULL;
-            newNode->left = NULL; //Filho da esquerda
-            newNode->right = NULL; //Filho da Direita
-            newNode->leaf = true; //Cada novo nó que entra na lista será considerado uma folha
+            newNode->next = NULL; //(Lista) Próximo nó da lista
+            newNode->left = NULL; //(Árvore) Filho da esquerda
+            newNode->right = NULL; //(Árvore) Filho da Direita
+            newNode->leaf = true; //Cada novo nó que entra na LISTA será considerado uma folha
 
             addToNodeList(nodeList, newNode);
         }
@@ -73,21 +73,45 @@ void Codificar::buildNodeList(HuffNode **nodeList, unsigned int *freqList) {
 }
 
 void Codificar::addToNodeList(HuffNode **nodeList, HuffNode *newNode) {
-    HuffNode *prevNode = NULL; //Último Nó
-    HuffNode *currNode = *nodeList; //currNode apontará para o conteúdo da nodeList;
+    HuffNode *prevNode = NULL; //Nó auxiliar inicial
+    HuffNode *currNode = *nodeList; //currNode apontará para o conteúdo da nodeList
 
-    while (currNode != NULL && currNode->freq < newNode->freq) {
-        prevNode = currNode; //O Nó anterior será o nó atual
-        currNode = prevNode->next; //O next do caractere em questão será o menor caractere anterior
+    while (currNode != NULL && (currNode->freq <= newNode->freq)) {
+        prevNode = currNode; //Auxiliar será o currNode se este for menor que o newNode
+        currNode = prevNode->next; // o currNode será o nó de menor frequência
     }
 
-    newNode->next = currNode; //Faz o 'next' do novo nó apontar para a nodeList;
+    newNode->next = currNode; //Faz newNode apontar para o nó de menor frequência
 
-    if(prevNode == NULL) { //Loop inicial
-        *nodeList = newNode; //A nodeList será composta pelo primeiro nó de caractere;
+    if(prevNode == NULL) { //Condição inicial(Loop 1)
+        *nodeList = newNode; //A nodeList será composta pelo primeiro nó de caractere
     }
     else { //Loops restantes
-        prevNode->next = newNode; //Faz o último nó sempre apontar para o novo nó
+        prevNode->next = newNode; //Faz o auxiliar apontar para o novo nó
+    }
+}
+
+void Codificar::buildHuffTree(HuffNode **nodeList) {
+    HuffNode *leftNode;
+    HuffNode *rightNode;
+    HuffNode *newNode;
+
+    while ((*nodeList)->next) { //Enquanto a Lista não aponta para o NULL. EX de Lista:(Lista 10-13-45-48-51)
+        leftNode = *nodeList; //LeftNode será o primeiro nó da Lista  (10)
+        *nodeList = leftNode->next; //A Lista será o segundo nó dela mesma (13)
+
+        rightNode = *nodeList; //RightNode será (13)
+        *nodeList = rightNode->next; //A Lista será (45) o terceiro nó da lista
+
+        newNode = (HuffNode *)calloc(1, sizeof(HuffNode)); //Aloca espaço para o novo nó;
+        newNode->chr = 0; //Típico nó da Árvore de Huffman será um número
+        newNode->freq = leftNode->freq + rightNode->freq; //Nó resultante será a soma dos filhos (13+10 = 23)
+        newNode->next = NULL; //Os nós de uma arvore não tem um "Next" por isso é NULL
+        newNode->left = leftNode; //Filho da Esquerda (10)
+        newNode->right = rightNode; //Filho da Direita (13)
+        newNode->leaf = false; //Como o nó resultante(23) tem 2 filhos (10 e 13), não é folha.
+
+        addToNodeList(nodeList, newNode); //Adciona o nó (23) na Lista Ligada
     }
 }
 
@@ -97,7 +121,6 @@ void Codificar::compressFile() {
 
     huffmanEncode(inputFile);
 }
-
 
 void Codificar::huffmanEncode(const char *inputFile) {
     /** Ler o arquivo source **/
@@ -128,15 +151,25 @@ void Codificar::huffmanEncode(const char *inputFile) {
     unsigned int charFreq;
     charFreq = calcNumFreq(freqList);
 
-    /** **/
+    /** Cria uma lista dos Nós de Huffman em ordem crescente **/
     HuffNode *nodeList = NULL;
     buildNodeList(&nodeList, freqList);
 
-    /** Testes **/
-    qDebug() << fileSize;
-    qDebug() << charFreq;
+    /** **/
+    buildHuffTree(&nodeList);
+    HuffNode * treeRoot = nodeList;
 
-    /**unsigned int c;
+    /** Testes **/
+
+    /*
+    char c;
+    while(nodeList!=NULL) {
+        c = nodeList->chr;
+        qDebug() << nodeList->freq << c;
+        nodeList = nodeList->next;
+    }
+    /*
+    unsigned int c;
     while ((c = fgetc(src)) != EOF) {
         qDebug() << freqList[5];
     }
@@ -148,6 +181,8 @@ void Codificar::huffmanEncode(const char *inputFile) {
             qDebug() << "DEC. ASCII: " << i << "CHAR: " << c << "Frequencia: " << freqList[i];
             fwrite(&c, sizeof(char), sizeof(c), dest);
         }
+    qDebug() << fileSize;
+    qDebug() << charFreq;
     }*/
 
     /** Fecha o arquivo **/

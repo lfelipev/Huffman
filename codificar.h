@@ -36,6 +36,9 @@ private:
 
     /** Função auxiliar: Adciona o novo nó(newNode) na lista em ordem crescente **/
     void addToNodeList(HuffNode **nodeList, HuffNode *newNode);
+
+    /** Cria a Árvore de Huffman a partir da Lista **/
+    void buildHuffTree(HuffNode **nodeList);
 };
 
 #endif // CODIFICAR_H
