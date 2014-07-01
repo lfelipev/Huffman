@@ -28,6 +28,12 @@ private:
         HuffNode * right;
     };
 
+    /** Codificação de Huffman **/
+    struct HuffCode {
+        unsigned char code[32];
+        unsigned int length;
+    };
+
     /** Calcula a frequência de cada caractere listado **/
     void calcCharFreq(FILE *src, unsigned int *freqList);
 
@@ -39,6 +45,9 @@ private:
 
     /** Cria a Árvore de Huffman a partir da Lista **/
     void buildHuffTree(HuffNode **nodeList);
+
+    /** **/
+    bool buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char currChar);
 };
 
 #endif // CODIFICAR_H

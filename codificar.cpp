@@ -115,6 +115,46 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
     }
 }
 
+bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char currChar) {
+    if(treeRoot->chr == currChar && treeRoot->leaf) {
+        return true;
+    }
+
+    if(treeRoot->left) {
+        hCode->code[hCode->length] = '0';
+        hCode->length++;
+
+        if(hCode->length == 32) {
+            printf("Tamanho do código atingiu seu limite!");
+            return false;
+        }
+
+        if(buildHuffCode(treeRoot->left, hCode, currChar)) {
+            hCode->code[hCode->length] = 0;
+            return true;
+        }
+        else {
+            hCode->length--;
+            hCode->code[hCode->length] = 0;
+        }
+    }
+
+    if(treeRoot->right) {
+        hCode->code[hCode->length] = '1';
+        hCode->length++;
+
+        if(buildHuffCode(treeRoot->right, hCode, currChar)) {
+            return true;
+        }
+        else {
+            hCode->length--;
+            hCode->code[hCode->length] = 0;
+        }
+    }
+
+    return false;
+}
+
 void Codificar::compressFile() {
     QByteArray byteArray1 = inputFilePath.toUtf8();
     const char *inputFile = byteArray1.constData();
@@ -155,9 +195,22 @@ void Codificar::huffmanEncode(const char *inputFile) {
     HuffNode *nodeList = NULL;
     buildNodeList(&nodeList, freqList);
 
-    /** **/
+    /** Cria a Árvode de Huffman **/
     buildHuffTree(&nodeList);
     HuffNode * treeRoot = nodeList;
+
+    /** **/
+    unsigned int i;
+    HuffCode newCode;
+    HuffCode * huffCode;
+    huffCode = (HuffCode *)calloc(256, sizeof(HuffCode));
+    for(i=0; i<256; ++i) {
+        if(freqList[i]>0) {
+            newCode.length = 0;
+            buildHuffCode(treeRoot, &newCode, i);
+            huffCode[i] = newCode;
+        }
+    }
 
     /** Testes **/
 
