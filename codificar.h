@@ -34,6 +34,18 @@ private:
         unsigned int length;
     };
 
+    /** **/
+    struct HuffHeader {
+        unsigned int charFreq;
+        unsigned int fileSize;
+    };
+
+    /** **/
+    struct HuffFreq {
+        unsigned int freq;
+        unsigned char charCode;
+    };
+
     /** Calcula a frequência de cada caractere listado **/
     void calcCharFreq(FILE *src, unsigned int *freqList);
 
@@ -48,6 +60,18 @@ private:
 
     /** **/
     bool buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char currChar);
+
+    /** **/
+    void writeHeader(FILE *dest, HuffHeader hHeader, unsigned int charFreq, unsigned int fileSize);
+
+    /** **/
+    void writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq);
+
+    /** **/
+    void writeCode(FILE *src, FILE *dest, HuffCode *huffCode, unsigned int fileSize);
+
+    /** **/
+    void freeHuffTree(HuffNode *treeRoot);
 };
 
 #endif // CODIFICAR_H

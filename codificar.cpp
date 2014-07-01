@@ -3,7 +3,7 @@
 #include<QDebug>
 
 Codificar::Codificar() {
-    QFileInfo file("../Huffman/in.txt");
+    QFileInfo file("../Huffman/teste.txt");
     inputFilePath = file.filePath();
     inputFileName = file.fileName();
 }
@@ -116,15 +116,15 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
 }
 
 bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char currChar) {
-    if(treeRoot->chr == currChar && treeRoot->leaf) {
-        return true;
+    if(treeRoot->chr == currChar && treeRoot->leaf) {//Se o caractere da raiz é o mesmo passado pela função
+        return true;                                 //E a raiz é uma folha. (Este é o  estado inicial depois de criada a árvore)
     }
 
     if(treeRoot->left) {
-        hCode->code[hCode->length] = '0';
-        hCode->length++;
+        hCode->code[hCode->length] = '0'; //Adciona 0 ao array do código
+        hCode->length++; //Incrementa o tamanho do código
 
-        if(hCode->length == 32) {
+        if(hCode->length == 32) { //Se o tamanho do código ja é 32
             printf("Tamanho do código atingiu seu limite!");
             return false;
         }
@@ -153,6 +153,65 @@ bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char
     }
 
     return false;
+}
+
+void Codificar::writeHeader(FILE *dest, HuffHeader hHeader, unsigned int charFreq, unsigned int fileSize) {
+    hHeader.charFreq = charFreq;
+    hHeader.fileSize = fileSize;
+
+    fwrite(&hHeader, sizeof(hHeader), 1, dest);
+}
+
+void Codificar::writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq) {
+    for(int i=0; i<256; ++i) {
+        if (freqList[i] > 0) {
+            hFreq.charCode = i;
+            hFreq.freq = freqList[i];
+
+            fwrite(&hFreq, sizeof(HuffFreq), 1, dest);
+        }
+    }
+}
+
+void Codificar::writeCode(FILE *src, FILE *dest, HuffCode *huffCode, unsigned int fileSize) {
+    unsigned int i, c;
+    unsigned int bits = 0;
+    char currChar = 0;
+    HuffCode currCode;
+    bool cancel = false;
+    unsigned int interval = fileSize/100;
+    int progress = 1;
+    unsigned int bytes = 0;
+
+    while((c = fgetc(src) != EOF)) {
+        bytes++;
+        currCode = huffCode[c];
+
+        for(i=0; i<currCode.length; ++i) {
+            currChar = (currChar << 1) + (currCode.code[i] == '1' ? 1 : 0);
+            bits++;
+
+            if(bits == 8) {
+                fputc(currChar, dest);
+                currChar = 0;
+                bits = 0;
+            }
+        }
+    }
+
+    if(bits > 0) {
+        currChar = currChar << (8 - bits);
+        fputc(currChar, dest);
+    }
+}
+
+void Codificar::freeHuffTree(HuffNode *treeRoot) {
+    if(treeRoot) {
+        freeHuffTree(treeRoot->left);
+        freeHuffTree(treeRoot->right);
+
+        free(treeRoot);
+    }
 }
 
 void Codificar::compressFile() {
@@ -207,10 +266,27 @@ void Codificar::huffmanEncode(const char *inputFile) {
     for(i=0; i<256; ++i) {
         if(freqList[i]>0) {
             newCode.length = 0;
-            buildHuffCode(treeRoot, &newCode, i);
+            buildHuffCode(treeRoot, &newCode, i); //Raiz da Árvore, Ponteiro, Caractere(i)
             huffCode[i] = newCode;
         }
     }
+
+    /** **/
+    HuffHeader hHeader;
+    writeHeader(dest, hHeader, charFreq, fileSize);
+
+    /** **/
+    HuffFreq hFreq;
+    writeFreq(dest, freqList, hFreq);
+
+    /** **/
+    writeCode(src, dest, huffCode, fileSize);
+
+    /** **/
+    freeHuffTree(treeRoot);
+    treeRoot = NULL;
+    free(huffCode);
+    free(freqList);
 
     /** Testes **/
 

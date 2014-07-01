@@ -16,10 +16,12 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    codificar.cpp
+    codificar.cpp \
+    decodificar.cpp
 
 HEADERS += \
-    codificar.h
+    codificar.h \
+    decodificar.h
 
 OTHER_FILES += \
     arvore.jpg \
