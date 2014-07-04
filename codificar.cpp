@@ -3,15 +3,22 @@
 #include<QDebug>
 
 Codificar::Codificar() {
-    QFileInfo file("../Huffman/teste.txt");
+    QFileInfo file("../Huffman/in.txt");
     inputFilePath = file.filePath();
     inputFileName = file.fileName();
+}
+
+void Codificar::compressFile() {
+    QByteArray byteArray1 = inputFilePath.toUtf8();
+    const char *inputFile = byteArray1.constData();
+
+    huffmanEncode(inputFile);
 }
 
 void Codificar::outputFilePath(const char *path, char *outputPath, const char *fileExtension) {
     int i;
     const int pathLength = strlen(path);
-    for (i=0; i<pathLength-5; ++i) {
+    for (i=0; i<pathLength-4; ++i) {
         outputPath[i] = path[i];
     }
     outputPath[i] = 0;
@@ -42,15 +49,15 @@ void Codificar::calcCharFreq(FILE *src, unsigned int *freqList) {
 
 unsigned int Codificar::calcNumFreq(unsigned int *freqList) {
     unsigned int i;
-    unsigned int charFreq = 0;
+    unsigned int numOfFreq = 0;
 
     for(i=0; i<256; ++i) {
         if(freqList[i] > 0) { //Conta cada vez que um caractere aparece
-            charFreq++;
+            numOfFreq++;
         }
     }
 
-    return charFreq;
+    return numOfFreq;
 }
 
 void Codificar::buildNodeList(HuffNode **nodeList, unsigned int *freqList) {
@@ -60,7 +67,7 @@ void Codificar::buildNodeList(HuffNode **nodeList, unsigned int *freqList) {
     for(i=0; i<256; ++i) {
         if(freqList[i] > 0) { //Um nó será criado sempre que um caractere dentre os 256 aparecer
             newNode = (HuffNode *)calloc(1, sizeof(HuffNode)); //Aloca um espaço na memória para o nó do caractere
-            newNode->chr = i; //Caractere em questão
+            newNode->charCode = i; //Caractere em questão
             newNode->freq = freqList[i]; //Quantidade em que o caractere em questão aparece
             newNode->next = NULL; //(Lista) Próximo nó da lista
             newNode->left = NULL; //(Árvore) Filho da esquerda
@@ -76,7 +83,7 @@ void Codificar::addToNodeList(HuffNode **nodeList, HuffNode *newNode) {
     HuffNode *prevNode = NULL; //Nó auxiliar inicial
     HuffNode *currNode = *nodeList; //currNode apontará para o conteúdo da nodeList
 
-    while (currNode != NULL && (currNode->freq <= newNode->freq)) {
+    while (currNode != NULL && (currNode->freq < newNode->freq)) {
         prevNode = currNode; //Auxiliar será o currNode se este for menor que o newNode
         currNode = prevNode->next; // o currNode será o nó de menor frequência
     }
@@ -95,6 +102,7 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
     HuffNode *leftNode;
     HuffNode *rightNode;
     HuffNode *newNode;
+    HuffNode *currNode;
 
     while ((*nodeList)->next) { //Enquanto a Lista não aponta para o NULL. EX de Lista:(Lista 10-13-45-48-51)
         leftNode = *nodeList; //LeftNode será o primeiro nó da Lista  (10)
@@ -104,7 +112,7 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
         *nodeList = rightNode->next; //A Lista será (45) o terceiro nó da lista
 
         newNode = (HuffNode *)calloc(1, sizeof(HuffNode)); //Aloca espaço para o novo nó;
-        newNode->chr = 0; //Típico nó da Árvore de Huffman será um número
+        newNode->charCode = 0; //Típico nó da Árvore de Huffman será um número
         newNode->freq = leftNode->freq + rightNode->freq; //Nó resultante será a soma dos filhos (13+10 = 23)
         newNode->next = NULL; //Os nós de uma arvore não tem um "Next" por isso é NULL
         newNode->left = leftNode; //Filho da Esquerda (10)
@@ -116,12 +124,12 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
 }
 
 bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char currChar) {
-    if(treeRoot->chr == currChar && treeRoot->leaf) {//Se o caractere da raiz é o mesmo passado pela função
-        return true;                                 //E a raiz é uma folha. (Este é o  estado inicial depois de criada a árvore)
+    if(treeRoot->charCode == currChar && treeRoot->leaf) {//Se o treeRoot atual possui o mesmo caractere(i) do parâmetro
+        return true;                                 //Se o treeRoot atual for uma folha.
     }
 
     if(treeRoot->left) {
-        hCode->code[hCode->length] = '0'; //Adciona 0 ao array do código
+        hCode->code[hCode->length] = '0';
         hCode->length++; //Incrementa o tamanho do código
 
         if(hCode->length == 32) { //Se o tamanho do código ja é 32
@@ -155,15 +163,16 @@ bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char
     return false;
 }
 
-void Codificar::writeHeader(FILE *dest, HuffHeader hHeader, unsigned int charFreq, unsigned int fileSize) {
-    hHeader.charFreq = charFreq;
+void Codificar::writeHeader(FILE *dest, HuffHeader hHeader, unsigned int numOfFreq, unsigned int fileSize) {
+    hHeader.numOfFreq = numOfFreq;
     hHeader.fileSize = fileSize;
 
     fwrite(&hHeader, sizeof(hHeader), 1, dest);
 }
 
 void Codificar::writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq) {
-    for(int i=0; i<256; ++i) {
+    unsigned int i;
+    for(i=0; i<256; ++i) {
         if (freqList[i] > 0) {
             hFreq.charCode = i;
             hFreq.freq = freqList[i];
@@ -178,9 +187,6 @@ void Codificar::writeCode(FILE *src, FILE *dest, HuffCode *huffCode, unsigned in
     unsigned int bits = 0;
     char currChar = 0;
     HuffCode currCode;
-    bool cancel = false;
-    unsigned int interval = fileSize/100;
-    int progress = 1;
     unsigned int bytes = 0;
 
     while((c = fgetc(src) != EOF)) {
@@ -214,20 +220,13 @@ void Codificar::freeHuffTree(HuffNode *treeRoot) {
     }
 }
 
-void Codificar::compressFile() {
-    QByteArray byteArray1 = inputFilePath.toUtf8();
-    const char *inputFile = byteArray1.constData();
-
-    huffmanEncode(inputFile);
-}
-
 void Codificar::huffmanEncode(const char *inputFile) {
     /** Ler o arquivo source **/
     FILE *src = fopen(inputFile, "rb");
 
     /** Abre o destino do arquivo **/
     char outputPath[1000];
-    const char *fileExtension = "2.txt";
+    const char *fileExtension = "3.txt";
     outputFilePath(inputFile, outputPath, fileExtension);
     FILE *dest = fopen(outputPath, "wb");
 
@@ -240,6 +239,7 @@ void Codificar::huffmanEncode(const char *inputFile) {
     /** Pega o tamanho do Arquivo Source **/
     unsigned int fileSize;
     fileSize = inputFileSize(src);
+    qDebug() << "filesize" << fileSize;
 
     /** Faz uma lista de ocorrência de caracteres **/
     unsigned int *freqList;
@@ -247,8 +247,8 @@ void Codificar::huffmanEncode(const char *inputFile) {
     calcCharFreq(src, freqList);
 
     /** Calcula número de ocorrências dos caracteres listados **/
-    unsigned int charFreq;
-    charFreq = calcNumFreq(freqList);
+    unsigned int numOfFreq;
+    numOfFreq = calcNumFreq(freqList);
 
     /** Cria uma lista dos Nós de Huffman em ordem crescente **/
     HuffNode *nodeList = NULL;
@@ -256,12 +256,12 @@ void Codificar::huffmanEncode(const char *inputFile) {
 
     /** Cria a Árvode de Huffman **/
     buildHuffTree(&nodeList);
-    HuffNode * treeRoot = nodeList;
+    HuffNode *treeRoot = nodeList;
 
-    /** **/
+    /** Cria o código de Huffman **/
     unsigned int i;
     HuffCode newCode;
-    HuffCode * huffCode;
+    HuffCode *huffCode;
     huffCode = (HuffCode *)calloc(256, sizeof(HuffCode));
     for(i=0; i<256; ++i) {
         if(freqList[i]>0) {
@@ -271,48 +271,25 @@ void Codificar::huffmanEncode(const char *inputFile) {
         }
     }
 
-    /** **/
+    /** Escreve o cabeçalho no arquivo destino **/
     HuffHeader hHeader;
-    writeHeader(dest, hHeader, charFreq, fileSize);
+    qDebug() << numOfFreq;
+    qDebug() << hHeader.fileSize;
+    qDebug() << hHeader.numOfFreq;
+    writeHeader(dest, hHeader, numOfFreq, fileSize);
 
-    /** **/
+    /** Escreve as frequências no arquivo destino **/
     HuffFreq hFreq;
     writeFreq(dest, freqList, hFreq);
 
-    /** **/
+    /** Escreve o código no arquivo destino **/
     writeCode(src, dest, huffCode, fileSize);
 
-    /** **/
+    /** Libera a memória **/
     freeHuffTree(treeRoot);
     treeRoot = NULL;
     free(huffCode);
     free(freqList);
-
-    /** Testes **/
-
-    /*
-    char c;
-    while(nodeList!=NULL) {
-        c = nodeList->chr;
-        qDebug() << nodeList->freq << c;
-        nodeList = nodeList->next;
-    }
-    /*
-    unsigned int c;
-    while ((c = fgetc(src)) != EOF) {
-        qDebug() << freqList[5];
-    }
-    rewind(src);
-    char c;
-    for(int i=0; i<256; ++i) {
-        if(freqList[i] > 0) {
-            c=i;
-            qDebug() << "DEC. ASCII: " << i << "CHAR: " << c << "Frequencia: " << freqList[i];
-            fwrite(&c, sizeof(char), sizeof(c), dest);
-        }
-    qDebug() << fileSize;
-    qDebug() << charFreq;
-    }*/
 
     /** Fecha o arquivo **/
     fclose(src);

@@ -26,3 +26,5 @@ HEADERS += \
 OTHER_FILES += \
     arvore.jpg \
     in.txt
+
+FORMS +=
