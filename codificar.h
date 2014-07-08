@@ -42,6 +42,12 @@ private:
        unsigned int fileSize;
    };
 
+   /** **/
+   struct HuffName {
+       QString FileName;
+       const char *fileExtension;
+   };
+
     /** Cabeçalho com a frequências e caractere**/
    struct HuffFreq {
        unsigned int freq;
@@ -70,10 +76,13 @@ private:
     void writeFreq(FILE * dest, unsigned int * freqList, HuffFreq hFreq);
 
     /** Escreve o código no arquivo de saída **/
-    void writeEncodedData(FILE * src, FILE * dest, HuffCode * huffCodeTable, unsigned int fileSize);
+    void writeEncodedData(FILE * src, FILE * dest, HuffCode * huffCodeTable);
 
     /** Libera a memória **/
     void freeHuffTree(HuffNode *treeRoot);
+
+    /** **/
+    void writeName(FILE *dest, HuffName hName, QString inputFileName);
 };
 
 #endif // CODIFICAR_H

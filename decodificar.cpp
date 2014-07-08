@@ -3,7 +3,7 @@
 #include<QDebug>
 
 decodificar::decodificar() {
-    QFileInfo file("../Huffman/in2.bin");
+    QFileInfo file("../Huffman/in3.txt");
     inputFilePath = file.filePath();
     inputFileName = file.fileName();
 }
@@ -15,10 +15,11 @@ void decodificar::decompressFile() {
     huffmanDecode(inputFile);
 }
 
-void decodificar::outputFilePath(const char *path, char *outputPath, const char *fileExtension) {
+void decodificar::outputFilePath(const char *path, char * outputPath, const char *fileExtension) {
     int i;
     const int pathLength = strlen(path);
-    for (i=0; i<pathLength-4; ++i) {
+
+    for(i=0; i<pathLength-4; i++) {
         outputPath[i] = path[i];
     }
     outputPath[i] = 0;
@@ -26,13 +27,13 @@ void decodificar::outputFilePath(const char *path, char *outputPath, const char 
     strcat(outputPath, fileExtension);
 }
 
-void decodificar::buildNodeList(HuffNode **nodeList, HuffFreq *hFreq, unsigned int charFreq) {
+void decodificar::buildNodeList(HuffNode ** nodeList, HuffFreq * hFreq, unsigned int numOfFreq) {
     unsigned int i;
-    HuffNode *newNode;
+    HuffNode * newNode;
 
-    for(i=0; i<charFreq; ++i) {
-        newNode = (HuffNode *)malloc(sizeof(HuffNode));
-        newNode->charCode = hFreq[i].chr;
+    for (i = 0; i < numOfFreq; i++) {
+        newNode = (HuffNode *) malloc(sizeof(HuffNode));
+        newNode->charCode = hFreq[i].charCode;
         newNode->freq = hFreq[i].freq;
         newNode->next = NULL;
         newNode->left = NULL;
@@ -43,29 +44,27 @@ void decodificar::buildNodeList(HuffNode **nodeList, HuffFreq *hFreq, unsigned i
     }
 }
 
-void decodificar::addToNodeList(HuffNode **nodeList, HuffNode *newNode) {
-    HuffNode *prevNode = NULL; //Nó auxiliar inicial
-    HuffNode *currNode = *nodeList; //currNode apontará para o conteúdo da nodeList
+void decodificar::addToNodeList(HuffNode ** nodeList, HuffNode * newNode) {
+    HuffNode * prevNode = NULL;
+    HuffNode * currNode = *nodeList;
 
-    while (currNode != NULL && (currNode->freq < newNode->freq)) {
-        prevNode = currNode; //Auxiliar será o currNode se este for menor que o newNode
-        currNode = prevNode->next; // o currNode será o nó de menor frequência
+    while ((currNode != NULL && currNode->freq < newNode->freq)) {
+        prevNode = currNode;
+        currNode = prevNode->next;
     }
 
-    newNode->next = currNode; //Faz newNode apontar para o nó de menor frequência
+    newNode->next = currNode;
 
-    if(prevNode == NULL) { //Condição inicial(Loop 1)
-        *nodeList = newNode; //A nodeList será composta pelo primeiro nó de caractere
+    if (prevNode == NULL) {
+        *nodeList = newNode;
     }
-    else { //Loops restantes
-        prevNode->next = newNode; //Faz o auxiliar apontar para o novo nó
+    else {
+        prevNode->next = newNode;
     }
 }
 
-void decodificar::buildHuffTree(HuffNode **nodeList) {
-    HuffNode *leftNode;
-    HuffNode *rightNode;
-    HuffNode *newNode;
+void decodificar::buildHuffTree(HuffNode ** nodeList) {
+    HuffNode * newNode, * leftNode, * rightNode;
 
     while((*nodeList)->next != NULL) {
         newNode = (HuffNode *)malloc(sizeof(HuffNode));
@@ -87,13 +86,13 @@ void decodificar::buildHuffTree(HuffNode **nodeList) {
     }
 }
 
-void decodificar::writeDecodedData(FILE *src, FILE *dest, HuffNode *rootTree, unsigned int fileSize) {
+void decodificar::writeDecodedData(FILE * src, FILE * dest, HuffNode * rootTree, unsigned int fileSize) {
     int bit = -1;
     unsigned int c;
-    unsigned int byteWritten = 0;
-    HuffNode *currNode = rootTree;
+    unsigned int bytesWritten = 0;
+    HuffNode * currNode = rootTree;
 
-    while(byteWritten < fileSize) {
+    while(bytesWritten < fileSize) {
         if(bit < 0) {
             c = fgetc(src);
 
@@ -113,21 +112,21 @@ void decodificar::writeDecodedData(FILE *src, FILE *dest, HuffNode *rootTree, un
 
         if(currNode->leaf) {
             fputc(currNode->charCode, dest);
-            byteWritten++;
+            bytesWritten++;
             currNode = rootTree;
         }
+
         bit--;
     }
 }
 
-void decodificar::freeHuffTree(HuffNode *treeRoot) {
+void decodificar::freeHuffTree(HuffNode * treeRoot) {
     if(treeRoot) {
         freeHuffTree(treeRoot->left);
         freeHuffTree(treeRoot->right);
 
         free(treeRoot);
     }
-
 }
 
 void decodificar::huffmanDecode(const char *inputFile) {
@@ -136,9 +135,9 @@ void decodificar::huffmanDecode(const char *inputFile) {
 
     /** Abre o destino do arquivo **/
     char outputPath[1000];
-    const char *fileExtension = ".txt";
+    const char * fileExtension = ".txt";
     outputFilePath(inputFile, outputPath, fileExtension);
-    FILE *dest = fopen(outputPath, "wb");
+    FILE * dest = fopen(outputPath, "wb");
 
     /** Verificação da existência do arquivo **/
     if (src == NULL) {
@@ -151,12 +150,12 @@ void decodificar::huffmanDecode(const char *inputFile) {
     fread(&hHeader, sizeof(hHeader), 1, src);
 
     /** Lê as frequências **/
-    HuffFreq *hFreq = (HuffFreq *)calloc(hHeader.charFreq, sizeof(HuffFreq));
-    fread(hFreq, sizeof(HuffFreq), hHeader.charFreq, src);
+    HuffFreq *hFreq = (HuffFreq *)calloc(hHeader.numOfFreq, sizeof(HuffFreq));
+    fread(hFreq, sizeof(HuffFreq), hHeader.numOfFreq, src);
 
     /** Cria a lista ligada com os caracteres e as frequências **/
     HuffNode *nodeList = NULL;
-    buildNodeList(&nodeList, hFreq, hHeader.charFreq);
+    buildNodeList(&nodeList, hFreq, hHeader.numOfFreq);
 
     /** Cria a Árvore de Huffman**/
     buildHuffTree(&nodeList);
