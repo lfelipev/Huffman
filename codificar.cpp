@@ -5,29 +5,30 @@
 
 using namespace std;
 
-Codificar::Codificar() {
-    QFileInfo file("../Huffman/in.txt");
+Codificar::Codificar(const char *fileName) {
+    char a[30] = "../Huffman/";
+    QFileInfo file(strcat(a, fileName));
     inputFilePath = file.filePath();
     inputFileName = file.fileName();
 }
 
 void Codificar::compressFile() {
-    QByteArray byteArray1 = inputFilePath.toUtf8();
-    const char *inputFile = byteArray1.constData();
+    QByteArray byteArray1 = inputFilePath.toUtf8(); //
+    const char *inputFile = byteArray1.constData(); //Conversão do path de QSTring para "const char*"
 
     huffmanEncode(inputFile);
 }
 
 void Codificar::outputFilePath(const char *path, char * outputPath, const char *fileExtension) {
     int i;
-    const int pathLength = strlen(path);
+    const int pathLength = strlen(path); //Variável para o tamanho do Path
 
     for(i=0; i<pathLength-4; i++) {
         outputPath[i] = path[i];
     }
     outputPath[i] = 0;
 
-    strcat(outputPath, fileExtension);
+    strcat(outputPath, fileExtension); //Concatena o NOME com .huff (Fica NOME.huff)
 }
 
 unsigned int Codificar::getFileSize(FILE * src) {

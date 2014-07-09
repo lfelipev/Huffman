@@ -2,8 +2,31 @@
 #include "decodificar.h"
 
 int main(int argc, char *argv[]) {
-    Codificar g;
+    Codificar g = Codificar("in.txt");
     decodificar f;
+    //argv[0] = huffman
+    //argv[1] = -c ou arquivo.huff
+    /*if(argv[1] == "-c") {
+        //argv[2] = arquivo.x
+        //argv[3] = -o ou nada
+        Codificar c = Codificar(argv[2]);
+        if(argv[3] == "-o") {
+            c.compressFile();
+            //argv[4] = arquivo_de_saida.huff
+        }
+        else {
+            c.compressFile();
+        }
+    }
+    else {
+        //argv[2] = -d ou nada
+        if(argv[2] == "-d") {
+            //argv[3] /home/user/destino
+        }
+        else {
+            f.decompressFile();
+        }
+    }*/
     /*switch (atoi(argv[1])) {
     case '-c':
         g.compressFile();
@@ -12,7 +35,7 @@ int main(int argc, char *argv[]) {
        f.decompressFile();
        break;
     }*/
-    //g.compressFile(); //teste
-    f.decompressFile();
+    g.compressFile(); //teste
+    //f.decompressFile();
     return 0;
 }

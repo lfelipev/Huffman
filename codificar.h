@@ -8,10 +8,17 @@
 class Codificar
 {
 public:
-    Codificar();
+    Codificar(const char *fileName);
+    /** Pega o inputFile e chama a função principal **/
     void compressFile();
+
+    /** Função Principal **/
     void huffmanEncode(const char *inputFile);
+
+    /** Pega o tamanho do arquivo **/
     unsigned int getFileSize(FILE *src);
+
+    /** **/
     unsigned int calcNumOfFreq(unsigned int *freqList);
 private:
     QString inputFileName; // String com o nome do Arquivo de Entrada
