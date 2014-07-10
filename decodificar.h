@@ -1,64 +1,82 @@
 #ifndef DECODIFICAR_H
 #define DECODIFICAR_H
 
-#include<stdio.h>
-#include<QString>
+#include <QDialog>
 
-class decodificar
-{
+namespace Ui {
+class Decodificar;
+}
+
+class Decodificar : public QDialog {
+    Q_OBJECT
 public:
-    decodificar();
-    void decompressFile();
+    explicit Decodificar(QWidget *parent = 0);
+    ~Decodificar();
+
+    /** Pega o arquivo de origem **/
+    QString getInputFileName();
+
+    /** Função principal **/
     void huffmanDecode(const char *inputFile);
+
 private:
-    QString inputFileName; // String com o nome do Arquivo de Entrada
-    QString inputFilePath; // String com o diretório do Arquivo de Entrada
+    Ui::Decodificar *ui;
 
-    /** Caminho de Saída do Arquivo **/
-    void outputFilePath(const char *path, char * outputPath, const char *fileExtension);
+    /** String com o nome do inputFile **/
+    QString inputFileName;
 
-    /** Nó da Árvore de Huffman **/
+    /** Diretório de saída **/
+    void outputFilePath(const char *path, char *outputPath, const char *fileExtension);
+
+    /** Pega o nome do arquivo de saída **/
+    void getOutputFileName();
+
+    /** (Auxiliar)Mostra uma mensagem no fim da descompressão **/
+    void showDoneMessage(const char *msg);
+
+    /** Nó principal(Nó de Huffman) **/
     struct HuffNode {
         unsigned char charCode;
         unsigned int freq;
         bool leaf;
-        HuffNode * next;
-        HuffNode * left;
-        HuffNode * right;
+        HuffNode *next;
+        HuffNode *left;
+        HuffNode *right;
     };
 
-    /** Cabeçalho de Huffman(Nó) **/
+    /** Nó de cabeçalho **/
     struct HuffHeader {
         unsigned int numOfFreq;
         unsigned int fileSize;
     };
 
-    /** **/
-    struct HuffName {
-        QString FileName;
-        const char *fileExtension;
-    };
-
-    /** Nós com a frequência e o caractere **/
+    /** Nó contendo caracteres com suas frequências **/
     struct HuffFreq {
         unsigned int freq;
         unsigned char charCode;
     };
 
-    /** Cria uma lista com as frequências decodificadas **/
-    void buildNodeList(HuffNode ** nodeList, HuffFreq * hFreq, unsigned int numOfFreq);
+    /** Constroi uma lista ligada com as frequências decodificadas **/
+    void buildNodeList(HuffNode **nodeList, HuffFreq *hFreq, unsigned int numOfFreq);
 
-    /** Função auxiliar: Adciona o novo nó(newNode) na lista **/
-    void addToNodeList(HuffNode ** nodeList, HuffNode * newNode);
+    /** (Função Auxiliar)Adciona o newNode na lista em ordem crescente **/
+    void addToNodeList(HuffNode **nodeList, HuffNode *newNode);
 
-    /** Cria a Árvore de Huffman **/
-    void buildHuffTree(HuffNode ** nodeList);
+    /** Constroi a Árvore com a NodeList **/
+    void buildHuffTree(HuffNode **nodeList);
 
-    /** **/
-    void writeDecodedData(FILE * src, FILE * dest, HuffNode * rootTree, unsigned int fileSize);
+    /** Escreve os dados decodificados no arquivo de saída **/
+    void writeDecodedData(FILE *src, FILE *dest, HuffNode *rootTree, unsigned int fileSize);
 
-    /** **/
-    void freeHuffTree(HuffNode * treeRoot);
+    /** Libera a memória **/
+    void freeHuffTree(HuffNode *treeRoot);
+
+public slots:
+    /** Busca o arquivo de entrada **/
+    void browseInputFile();
+
+    /** Chama a função principal **/
+    void decompressFile();
 };
 
 #endif // DECODIFICAR_H

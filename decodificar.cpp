@@ -1,21 +1,45 @@
-#include "decodificar.h"
-#include<QFileInfo>
-#include<QDebug>
+#include "Decodificar.h"
+#include "ui_decodificar.h"
+#include "QFileDialog"
+#include "QMessageBox"
+#include "stdio.h"
+#include "stdlib.h"
+#include <assert.h>
+#include "QDebug"
+#include "QProgressDialog"
+#include "select.h"
 
-decodificar::decodificar() {
-    QFileInfo file("../Huffman/in3.txt");
-    inputFilePath = file.filePath();
-    inputFileName = file.fileName();
+Decodificar::Decodificar(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::Decodificar) {
+    ui->setupUi(this);
+
+    /** Botões para selecionar **/
+    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(browseInputFile()));
+    connect(ui->decodeButton, SIGNAL(clicked()), this, SLOT(decompressFile()));
+
+    /** Texto de Error **/
+    ui->warningText->setVisible(false);
 }
 
-void decodificar::decompressFile() {
-    QByteArray byteArray1 = inputFilePath.toUtf8();
-    const char *inputFile = byteArray1.constData();
-
-    huffmanDecode(inputFile);
+Decodificar::~Decodificar() {
+    delete ui;
 }
 
-void decodificar::outputFilePath(const char *path, char * outputPath, const char *fileExtension) {
+void Decodificar::browseInputFile() {
+    /** Caixa para selecionar o arquivo **/
+    inputFileName = QFileDialog::getOpenFileName(this, tr("Selecione o arquivo"),"../Huffman/",
+                                                 tr("Huffman File (*.huff)"));
+
+    ui->inputFile->setText(inputFileName);
+}
+
+QString Decodificar::getInputFileName() {
+    return inputFileName;
+}
+
+void Decodificar::outputFilePath(const char *path, char *outputPath, const char *fileExtension) {
+    // Mesma função da codificar.h
     int i;
     const int pathLength = strlen(path);
 
@@ -27,9 +51,33 @@ void decodificar::outputFilePath(const char *path, char * outputPath, const char
     strcat(outputPath, fileExtension);
 }
 
-void decodificar::buildNodeList(HuffNode ** nodeList, HuffFreq * hFreq, unsigned int numOfFreq) {
+void Decodificar::decompressFile() {
+    if (inputFileName == "") {
+        /** ERROR MSG **/
+        ui->warningText->setVisible(false);
+        showDoneMessage("Por favor selecione um arquivo.");
+    }
+    else {
+        ui->warningText->setVisible(false);
+
+        QByteArray byteArray1 = inputFileName.toUtf8();
+        const char* inputFile = byteArray1.constData();
+        huffmanDecode(inputFile);
+    }
+}
+
+void Decodificar::showDoneMessage(const char *msg) {
+    QMessageBox msgBox;
+    msgBox.setText(msg);
+    msgBox.setWindowTitle("Descompressão");
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.exec();
+}
+
+void Decodificar::buildNodeList(HuffNode **nodeList, HuffFreq *hFreq, unsigned int numOfFreq) {
+    /** Mesma função da codificar.h **/
     unsigned int i;
-    HuffNode * newNode;
+    HuffNode *newNode;
 
     for (i = 0; i < numOfFreq; i++) {
         newNode = (HuffNode *) malloc(sizeof(HuffNode));
@@ -44,7 +92,8 @@ void decodificar::buildNodeList(HuffNode ** nodeList, HuffFreq * hFreq, unsigned
     }
 }
 
-void decodificar::addToNodeList(HuffNode ** nodeList, HuffNode * newNode) {
+void Decodificar::addToNodeList(HuffNode **nodeList, HuffNode *newNode) {
+    /** Mesma função da codificar.h **/
     HuffNode * prevNode = NULL;
     HuffNode * currNode = *nodeList;
 
@@ -63,7 +112,8 @@ void decodificar::addToNodeList(HuffNode ** nodeList, HuffNode * newNode) {
     }
 }
 
-void decodificar::buildHuffTree(HuffNode ** nodeList) {
+void Decodificar::buildHuffTree(HuffNode **nodeList) {
+    /** Mesma função da codificar.h **/
     HuffNode * newNode, * leftNode, * rightNode;
 
     while((*nodeList)->next != NULL) {
@@ -86,17 +136,25 @@ void decodificar::buildHuffTree(HuffNode ** nodeList) {
     }
 }
 
-void decodificar::writeDecodedData(FILE * src, FILE * dest, HuffNode * rootTree, unsigned int fileSize) {
+void Decodificar::writeDecodedData(FILE *src, FILE *dest, HuffNode *rootTree, unsigned int fileSize) {
     int bit = -1;
     unsigned int c;
     unsigned int bytesWritten = 0;
-    HuffNode * currNode = rootTree;
+    HuffNode *currNode = rootTree;
+    bool cancel = false;
+    unsigned int interval = fileSize/100;
+    int progress = 1;
+
+    QProgressDialog progressDialog("Descomprimindo...", "Cancelar", 0, fileSize, this);
+    progressDialog.setWindowModality(Qt::WindowModal);
+    progressDialog.setValue(0);
 
     while(bytesWritten < fileSize) {
         if(bit < 0) {
             c = fgetc(src);
 
-            if(c == EOF) {
+            if(c == EOF)
+            {
                 break;
             }
 
@@ -117,10 +175,27 @@ void decodificar::writeDecodedData(FILE * src, FILE * dest, HuffNode * rootTree,
         }
 
         bit--;
+
+        if(bytesWritten > interval*progress) {
+            progressDialog.setValue(interval*progress);
+            progress++;
+        }
+
+        if (progressDialog.wasCanceled()) {
+            cancel = true;
+            showDoneMessage("Interrompido");
+            break;
+        }
+    }
+
+    progressDialog.setValue(fileSize);
+
+    if(!cancel) {
+        showDoneMessage("A descompressão foi um sucesso!");
     }
 }
 
-void decodificar::freeHuffTree(HuffNode * treeRoot) {
+void Decodificar::freeHuffTree(HuffNode *treeRoot) {
     if(treeRoot) {
         freeHuffTree(treeRoot->left);
         freeHuffTree(treeRoot->right);
@@ -129,19 +204,19 @@ void decodificar::freeHuffTree(HuffNode * treeRoot) {
     }
 }
 
-void decodificar::huffmanDecode(const char *inputFile) {
+void Decodificar::huffmanDecode(const char *inputFile) {
     /** Ler o arquivo source **/
     FILE *src = fopen(inputFile, "rb");
 
-    /** Abre o destino do arquivo **/
+     /** Abre o destino do arquivo **/
     char outputPath[1000];
-    const char * fileExtension = ".txt";
+    const char *fileExtension = ".jpg";
     outputFilePath(inputFile, outputPath, fileExtension);
-    FILE * dest = fopen(outputPath, "wb");
+    FILE *dest = fopen(outputPath, "wb");
 
     /** Verificação da existência do arquivo **/
     if (src == NULL) {
-        qDebug() << "Nao foi possível encontrar o arquivo de origem!";
+        fprintf(stderr, "O arquivo não pôde ser aberto");
         exit(EXIT_FAILURE);
     }
 
@@ -154,7 +229,7 @@ void decodificar::huffmanDecode(const char *inputFile) {
     fread(hFreq, sizeof(HuffFreq), hHeader.numOfFreq, src);
 
     /** Cria a lista ligada com os caracteres e as frequências **/
-    HuffNode *nodeList = NULL;
+    HuffNode * nodeList = NULL;
     buildNodeList(&nodeList, hFreq, hHeader.numOfFreq);
 
     /** Cria a Árvore de Huffman**/
@@ -172,3 +247,4 @@ void decodificar::huffmanDecode(const char *inputFile) {
     fclose(src);
     fclose(dest);
 }
+
