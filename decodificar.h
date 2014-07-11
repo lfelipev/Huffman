@@ -48,6 +48,7 @@ private:
     struct HuffHeader {
         unsigned int numOfFreq;
         unsigned int fileSize;
+        const char* fileExtension;
     };
 
     /** Nó contendo caracteres com suas frequências **/

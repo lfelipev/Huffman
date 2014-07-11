@@ -4,7 +4,6 @@
 #include "QMessageBox"
 #include "stdio.h"
 #include "stdlib.h"
-#include <assert.h>
 #include "QProgressDialog"
 #include <QDebug>
 #include<string>
@@ -15,21 +14,21 @@ Codificar::Codificar(QWidget *parent) :
     ui->setupUi(this);
 
     /** Botões para selecionar **/
-    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(browseInputFile()));
-    connect(ui->encodeButton, SIGNAL(clicked()), this, SLOT(compressFile()));
+    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(browseInputFile())); //Botão de busca
+    connect(ui->encodeButton, SIGNAL(clicked()), this, SLOT(compressFile())); //Botão de comprimir
 
     /** Texto de Error **/
-    ui->warningText->setVisible(false);
+    ui->warningText->setVisible(false); //Mensagem de erro inicialmente invisível
 }
 
-Codificar::~Codificar() {
+Codificar::~Codificar() { //Criado automaticamente
     delete ui;
 }
 
-void Codificar::browseInputFile() {
+void Codificar::browseInputFile() { //Função de buscar o arquivo
     /** Caixa para selecionar o arquivo **/
-    inputFileName = QFileDialog::getOpenFileName(this, tr("Selecione o arquivo"),"../Huffman/",
-                                                 tr("All files (*.*)"),
+    inputFileName = QFileDialog::getOpenFileName(this, tr("Selecione o arquivo"),"../Huffman/", //Pasta inicial
+                                                 tr("All files (*.*)"), //Extensão do arquivo a buscar
                                                  0, QFileDialog::DontUseNativeDialog);
     ui->inputFile->setText(inputFileName);
 }
@@ -50,7 +49,7 @@ void Codificar::compressFile() {
     if (inputFileName == "") {
         /** ERROR MSG **/
         ui->warningText->setVisible(false);
-        showDoneMessage("Por favor selecione um arquivo.");
+        showDoneMessage("Por favor selecione um arquivo."); //Mensagem de erro caso nada seja selecionado
     }
     else {
         ui->warningText->setVisible(false);
@@ -65,7 +64,7 @@ void Codificar::compressFile() {
 void Codificar::showDoneMessage(const char *msg) {
     QMessageBox msgBox;
     msgBox.setText(msg);
-    msgBox.setWindowTitle("Compressão");
+    msgBox.setWindowTitle("Compressão");  //Título da janela
     msgBox.setIcon(QMessageBox::Information);
     msgBox.exec();
 }
@@ -82,7 +81,7 @@ unsigned int Codificar::getFileSize(FILE *src) {
     return fileSize;
 }
 
-void Codificar::calcCharFreq(FILE * src, unsigned int *freqList) {
+void Codificar::calcCharFreq(FILE *src, unsigned int *freqList) {
     unsigned int c; // Cursor
 
     while((c = fgetc(src)) != EOF) { //Lista os caracteres até o fim do arquivo
@@ -166,8 +165,8 @@ void Codificar::buildHuffTree(HuffNode **nodeList) {
 }
 
 bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char goalChar) {
-    if(treeRoot->charCode == goalChar && treeRoot->leaf) { //TreeRoot : 11 hCode = newCode(char + length)
-        return true;
+    if(treeRoot->charCode == goalChar && treeRoot->leaf) { //TreeRoot 0: 11 hCode = newCode(char + length)
+        return true; //Nesse caso é quando a árvore tem apenas 1 caractere
     }
 
     if(treeRoot->left) { //Filho da Esquerda = 6
@@ -180,7 +179,7 @@ bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char
         }
 
         if(buildHuffCode(treeRoot->left, hCode, goalChar)) {
-            hCode->code[hCode->length] = 0;
+            hCode->code[hCode->length] = 0; //Caso o caractere do filho da esquerda é igual ao goalChar
             return true;
         }
         else {
@@ -206,10 +205,15 @@ bool Codificar::buildHuffCode(HuffNode *treeRoot, HuffCode *hCode, unsigned char
 }
 
 void Codificar::writeHeader(FILE *dest, HuffHeader hHeader, unsigned int numOfFreq, unsigned int fileSize) {
+    QByteArray byteArray1 = inputFileName.toUtf8();
+    const char *fileName = byteArray1.constData();
+    hHeader.fileExtension = strrchr(fileName, '.');
+
     hHeader.numOfFreq = numOfFreq; //Escreve quantos caracteres repetem
     hHeader.fileSize = fileSize; //Escreve o tamanho do arquivo
 
     fwrite(&hHeader, sizeof(hHeader), 1, dest);
+    qDebug() << hHeader.fileExtension;
 }
 
 void Codificar::writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq) {
@@ -225,36 +229,41 @@ void Codificar::writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq) {
     }
 }
 
-void Codificar::writeEncodedData(FILE *src, FILE *dest, HuffCode *huffCodeTable, unsigned int fileSize) {
+void Codificar::writeEncodedData(FILE *src, FILE *dest, HuffCode *huffCode, unsigned int fileSize) {
+    /** Variáveis principais **/
     unsigned int i, c;
     unsigned int bits = 0;
+    unsigned int bytes = 0;
     char currChar = 0;
     HuffCode currCode;
+
+    /** Variáveis p/ Interface gráfica **/
     bool cancel = false;
     unsigned int interval = fileSize/100;
     int progress = 1;
-    unsigned int bytes = 0;
 
+    /** Interface gráfica **/
     QProgressDialog progressDialog("Comprimindo...", "Cancelar", 0, fileSize, this);
     progressDialog.setWindowModality(Qt::WindowModal);
     progressDialog.setValue(0);
 
-    while((c = fgetc(src)) != EOF) {
-        bytes++;
-        currCode = huffCodeTable[c];
+    /** Programa principal **/
+    while((c = fgetc(src)) != EOF) { //Até o fim do arquivo
+        bytes++; //Incrementa os bytes para cada caractere
+        currCode = huffCode[c]; //iguala os códigos dos caracteres
 
-        for(i=0; i<currCode.length; i++) {
-            currChar = (currChar << 1) + (currCode.code[i] == '1' ? 1 : 0);
+        for(i=0; i<currCode.length; i++) { //de 0 até o tamanho do código do caractere
+            currChar = (currChar << 1) + (currCode.code[i] == '1' ? 1 : 0); //Desloca os bits para listar os caracteres
             bits++;
 
-            if(bits == 8) {
-                fputc(currChar, dest);
+            if(bits == 8) { //Ao atingir os 8 bits
+                fputc(currChar, dest); //Escreve os bytes no outputFile
                 currChar = 0;
                 bits = 0;
             }
         }
 
-
+        /** Interface gráfica **/
         if(bytes > interval*progress) {
             progressDialog.setValue(progress);
             progress++;
@@ -267,7 +276,8 @@ void Codificar::writeEncodedData(FILE *src, FILE *dest, HuffCode *huffCodeTable,
         }
     }
 
-    if(bits > 0) {
+    /** Função principal **/
+    if(bits > 0) { //Se sobrar lixo
         currChar = currChar << (8 - bits);
         fputc(currChar, dest);
     }
@@ -328,13 +338,13 @@ void Codificar::huffmanEncode(const char* inputFile) {
     /** Codificação da árvore **/
     unsigned int i;
     HuffCode newCode;
-    HuffCode *huffCodeTable;
-    huffCodeTable = (HuffCode *)calloc(256, sizeof(HuffCode));
+    HuffCode *huffCode;
+    huffCode = (HuffCode *)calloc(256, sizeof(HuffCode));
     for(i=0; i<256; i++) {
-        if(freqList[i] > 0) {
+        if(freqList[i] > 0) { //Para cada caractere da lista
             newCode.length = 0;
             buildHuffCode(treeRoot, &newCode, i);
-            huffCodeTable[i] = newCode;
+            huffCode[i] = newCode;
         }
     }
 
@@ -347,12 +357,12 @@ void Codificar::huffmanEncode(const char* inputFile) {
     writeFreq(dest, freqList, hFreq);
 
     /** Escreve o código no arquivo destino **/
-    writeEncodedData(src, dest, huffCodeTable, fileSize);
+    writeEncodedData(src, dest, huffCode, fileSize);
 
     /** Libera a memória **/
     freeHuffTree(treeRoot);
     treeRoot = NULL;
-    free(huffCodeTable);
+    free(huffCode);
     free(freqList);
 
     /** Fecha os arquivo **/

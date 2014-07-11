@@ -60,6 +60,7 @@ private:
     struct HuffHeader {
         unsigned int numOfFreq;
         unsigned int fileSize;
+        const char* fileExtension;
     };
 
     /** Nó contendo caracteres com suas frequências **/
@@ -90,7 +91,7 @@ private:
     void writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq);
 
     /** Escreve a codificação no arquivo de saída **/
-    void writeEncodedData(FILE *src, FILE *dest, HuffCode *huffCodeTable, unsigned int fileSize);
+    void writeEncodedData(FILE *src, FILE *dest, HuffCode *huffCode, unsigned int fileSize);
 
     /** Libera a memória **/
     void freeHuffTree(HuffNode * treeRoot);
