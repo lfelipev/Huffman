@@ -213,12 +213,6 @@ void Decodificar::huffmanDecode(const char *inputFile) {
     /** Ler o arquivo source **/
     FILE *src = fopen(inputFile, "rb");
 
-    /** Lê o Cabeçalho de Huffman **/
-    HuffHeader hHeader;
-    fread(&hHeader, sizeof(hHeader), 1, src);
-
-    qDebug() << hHeader.fileExtension;
-
      /** Abre o destino do arquivo **/
     char outputPath[1000];
     const char *fileExtension = ".jpg";
@@ -232,8 +226,8 @@ void Decodificar::huffmanDecode(const char *inputFile) {
     }
 
     /** Lê o Cabeçalho de Huffman **/
-    /*HuffHeader hHeader;
-    fread(&hHeader, sizeof(hHeader), 1, src); */
+    HuffHeader hHeader;
+    fread(&hHeader, sizeof(hHeader), 1, src);
 
     /** Lê as frequências **/
     HuffFreq *hFreq = (HuffFreq *)calloc(hHeader.numOfFreq, sizeof(HuffFreq));

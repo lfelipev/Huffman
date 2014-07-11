@@ -213,7 +213,6 @@ void Codificar::writeHeader(FILE *dest, HuffHeader hHeader, unsigned int numOfFr
     hHeader.fileSize = fileSize; //Escreve o tamanho do arquivo
 
     fwrite(&hHeader, sizeof(hHeader), 1, dest);
-    qDebug() << hHeader.fileExtension;
 }
 
 void Codificar::writeFreq(FILE *dest, unsigned int *freqList, HuffFreq hFreq) {
